@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "mental-health-crises-llm-evaluation"
+version = "0.1.0"
+description = ""
+authors = ["skeuomorph <m.zen@tutanota.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.10"
+pandas = "^2.3.1"
+anthropic = "^0.60.0"
+openai = "^1.98.0"
+dotenv = "^0.9.9"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
