@@ -59,6 +59,7 @@ mental-health-crises-LLM-evaluation/
 1. **Setup Environment**:
    ```bash
    poetry install
+   poetry shell
    ```
 
 2. **Generate Scenarios**:
