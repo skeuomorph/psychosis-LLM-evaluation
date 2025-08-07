@@ -23,7 +23,6 @@ class ScenarioResponder:
                 response = openai.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=512,
                     temperature=0.7,
                 )
                 dump = response.model_dump()
@@ -38,7 +37,7 @@ class ScenarioResponder:
             try:
                 response = client.messages.create(
                     model="claude-sonnet-4-20250514",
-                    max_tokens=512,
+                    max_tokens=2000,
                     temperature=0.7,
                     messages=[{"role": "user", "content": prompt}],
                 )
@@ -57,7 +56,6 @@ class ScenarioResponder:
                 response = client.chat.completions.create(
                     model="deepseek-v3-0324",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=512,
                     temperature=0.7,
                 )
                 dump = response.model_dump()
@@ -74,7 +72,6 @@ class ScenarioResponder:
                 response = client.chat.completions.create(
                     model="llama3.1-405b-instruct-fp8",
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=512,
                     temperature=0.7,
                 )
                 dump = response.model_dump()

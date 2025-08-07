@@ -41,7 +41,7 @@ class ScenarioGenerator:
             prompt = scenario_prompts["base_prompt"] + "\n" + excerpt
             response = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=1000,
+                max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
             self.df.at[idx, "base_scenario"] = self.clean_variation_text(response.model_dump()['content'][0]['text'])
@@ -52,7 +52,7 @@ class ScenarioGenerator:
             prompt = scenario_prompts["variations_prompt"] + "\n" + str(base_scenario)
             response = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
-                max_tokens=1000,
+                max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
             self.df.at[idx, "scenario_variations"] = self.clean_variation_text(response.model_dump()['content'][0]['text'])
