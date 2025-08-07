@@ -58,9 +58,8 @@ mental-health-crises-LLM-evaluation/
 
 1. **Setup Environment**:
    ```bash
-   pip install -r requirements.txt
-   # or if using poetry
    poetry install
+   poetry shell
    ```
 
 2. **Generate Scenarios**:
