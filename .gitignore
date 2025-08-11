@@ -2,3 +2,5 @@ __pycache__/
 **/__pycache__/
 .env
 *.pyc
+pipeline/src/data/~$manual_criteria_check_20250809.xlsx
+pipeline/src/data/manual_criteria_check_20250809.xlsx
