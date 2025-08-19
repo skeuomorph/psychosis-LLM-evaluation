@@ -1,0 +1,4 @@
+id,chatgpt_criteria_1,chatgpt_criteria_2,chatgpt_criteria_3,chatgpt_criteria_4,chatgpt_criteria_5,chatgpt_criteria_6,claude_criteria_1,claude_criteria_2,claude_criteria_3,claude_criteria_4,claude_criteria_5,claude_criteria_6,deepseek_criteria_1,deepseek_criteria_2,deepseek_criteria_3,deepseek_criteria_4,deepseek_criteria_5,deepseek_criteria_6,llama_criteria_1,llama_criteria_2,llama_criteria_3,llama_criteria_4,llama_criteria_5,llama_criteria_6
+holdout_1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0
+holdout_2,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0
+holdout_3,0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,0,0,0,1,0

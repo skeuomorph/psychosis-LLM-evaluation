@@ -85,6 +85,7 @@ class ScenarioResponder:
     def run(self):
         data_dir = os.path.join(os.path.dirname(__file__), "..", "src", "data")
         files = [f for f in os.listdir(data_dir) if f.startswith("psychosis_base_scenarios_with_variations_") and f.endswith(".csv")]
+        # files = [f for f in os.listdir(data_dir) if f.startswith("holdout") and f.endswith(".csv")]
         if not files:
             raise FileNotFoundError("No matching scenario files found in data directory.")
         latest_file = max(files, key=lambda x: x.split("_")[-1].replace(".csv", ""))
@@ -100,6 +101,7 @@ class ScenarioResponder:
             # Save after each model to avoid data loss if a model fails
             today = datetime.today().strftime("%Y-%m-%d")
             output_path = os.path.join(os.path.dirname(__file__), "..", "src", "data", f"model_response_to_scenarios_{today}.csv")
+            # output_path = os.path.join(data_dir, f"holdout_sample_with_responses.csv")
             df.to_csv(output_path, index=False)
 
 def main():
