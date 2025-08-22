@@ -58,6 +58,7 @@ class ScenarioResponder:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                 )
+                print(f"Response from model {self.model_name}: {response}")
                 dump = response.model_dump()
                 prompt_tokens = dump.get('usage', {}).get('prompt_tokens')
                 response_tokens = dump.get('usage', {}).get('completion_tokens')
@@ -70,7 +71,7 @@ class ScenarioResponder:
             client = openai.OpenAI(api_key=api_key, base_url="https://api.lambda.ai/v1")
             try:
                 response = client.chat.completions.create(
-                    model="llama3.1-405b-instruct-fp8",
+                    model="llama3.1-405b-instruct",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                 )
@@ -90,6 +91,7 @@ class ScenarioResponder:
             raise FileNotFoundError("No matching scenario files found in data directory.")
         latest_file = max(files, key=lambda x: x.split("_")[-1].replace(".csv", ""))
         input_path = os.path.join(data_dir, latest_file)
+        print(f"Using input file: {input_path}")
 
         df = pd.read_csv(input_path)
 
