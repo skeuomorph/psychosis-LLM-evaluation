@@ -1,3 +1,5 @@
+from pipeline.src.utils.logger.token_logger import log_token_usage
+
 import os
 from datetime import datetime
 
@@ -44,7 +46,11 @@ class ScenarioGenerator:
                 max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
-            self.df.at[idx, "base_scenario"] = self.clean_variation_text(response.model_dump()['content'][0]['text'])
+            dump = response.model_dump()
+            prompt_tok = dump.get('usage', {}).get('input_tokens')
+            response_tok = dump.get('usage', {}).get('output_tokens')
+            log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
+            self.df.at[idx, "base_scenario"] = self.clean_variation_text(dump['content'][0]['text'])
         self.df.to_csv(self.base_scenarios_path, index=False)
 
     def generate_variations(self):
@@ -55,7 +61,11 @@ class ScenarioGenerator:
                 max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
-            self.df.at[idx, "scenario_variations"] = self.clean_variation_text(response.model_dump()['content'][0]['text'])
+            dump = response.model_dump()
+            prompt_tok = dump.get('usage', {}).get('input_tokens')
+            response_tok = dump.get('usage', {}).get('output_tokens')
+            log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
+            self.df.at[idx, "scenario_variations"] = self.clean_variation_text(dump['content'][0]['text'])
 
     def split_and_save_variations(self):
         rows = []

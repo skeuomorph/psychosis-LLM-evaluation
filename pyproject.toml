@@ -12,6 +12,10 @@ anthropic = "^0.60.0"
 openai = "^1.98.0"
 dotenv = "^0.9.9"
 scikit-learn = "^1.7.1"
+google = "^3.0.0"
+google-genai = "^1.31.0"
+google-generativeai = "^0.8.5"
+mistralai = "^1.9.7"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -26,9 +26,12 @@ class ScenarioResponder:
                     temperature=0.7,
                 )
                 dump = response.model_dump()
-                prompt_tokens = dump.get('usage', {}).get('prompt_tokens')
-                response_tokens = dump.get('usage', {}).get('completion_tokens')
-                log_token_usage("gpt-4o", prompt, dump['choices'][0]['message']['content'], prompt_tokens, response_tokens)
+                prompt_tok = dump.get('usage', {}).get('prompt_tokens')
+                thought_tok = dump.get('usage', {}).get('completion_tokens_details', {}).get('reasoning_tokens')
+                if thought_tok == 0:
+                    thought_tok = None
+                response_tok = dump.get('usage', {}).get('completion_tokens')
+                log_token_usage("gpt-4o", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=thought_tok, response_tokens=response_tok)
                 return self.clean_variation_text(dump['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
@@ -42,10 +45,10 @@ class ScenarioResponder:
                     messages=[{"role": "user", "content": prompt}],
                 )
                 dump = response.model_dump()
-                # NOTE: Anthropic's response structure is different to the other models
-                prompt_tokens = dump.get('usage', {}).get('input_tokens')
-                response_tokens = dump.get('usage', {}).get('output_tokens')
-                log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens, response_tokens)
+                prompt_tok = dump.get('usage', {}).get('input_tokens')
+                thought_tok = dump.get('usage', {}).get('reasoning_tokens') if 'reasoning_tokens' in dump.get('usage', {}) else None
+                response_tok = dump.get('usage', {}).get('output_tokens')
+                log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens=prompt_tok, thought_tokens=thought_tok, response_tokens=response_tok)
                 return self.clean_variation_text(response.model_dump()['content'][0]['text'])
             except Exception as e:
                 raise e
@@ -60,9 +63,9 @@ class ScenarioResponder:
                 )
                 print(f"Response from model {self.model_name}: {response}")
                 dump = response.model_dump()
-                prompt_tokens = dump.get('usage', {}).get('prompt_tokens')
-                response_tokens = dump.get('usage', {}).get('completion_tokens')
-                log_token_usage("deepseek-v3-0324", prompt, dump['choices'][0]['message']['content'], prompt_tokens, response_tokens)
+                prompt_tok = dump.get('usage', {}).get('prompt_tokens')
+                response_tok = dump.get('usage', {}).get('completion_tokens')
+                log_token_usage("deepseek-v3-0324", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
                 return self.clean_variation_text(response.model_dump()['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
@@ -76,9 +79,9 @@ class ScenarioResponder:
                     temperature=0.7,
                 )
                 dump = response.model_dump()
-                prompt_tokens = dump.get('usage', {}).get('prompt_tokens')
-                response_tokens = dump.get('usage', {}).get('completion_tokens')
-                log_token_usage("llama3.1-405b-instruct-fp8", prompt, dump['choices'][0]['message']['content'], prompt_tokens, response_tokens)
+                prompt_tok = dump.get('usage', {}).get('prompt_tokens')
+                response_tok = dump.get('usage', {}).get('completion_tokens')
+                log_token_usage("llama3.1-405b-instruct-fp8", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
                 return self.clean_variation_text(response.model_dump()['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
