@@ -26,7 +26,7 @@ class GenerateStats:
         # Criteria-specific stats
         criteria_kappa = self.criteria_specific_kappa(self.df_human1, self.df_human2)
         self.plot_bar(criteria_kappa, "Human Raters Criteria-specific Cohen's Kappa", "Kappa")
-
+        print("criteria specific cohen's kappa done")
         # Criteria-specific Fleiss' Kappa (human2, human1, Qwen)
         fleiss_kappa_kmq = self.criteria_specific_fleiss_kappa([self.df_human2, self.df_human1, self.df_qwen])
         self.plot_bar(fleiss_kappa_kmq, "Criteria-specific Fleiss' Kappa (human2, human1, Qwen)", "Fleiss' Kappa")
