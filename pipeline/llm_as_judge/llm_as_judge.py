@@ -11,7 +11,6 @@ from google import genai
 from google.genai import types
 from openai import OpenAI
 from datetime import datetime
-from concurrent.futures import TimeoutError as FuturesTimeout
 
 class LLMAsJudge:
     def __init__(self, model_name=None):

@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import mode
-from sklearn.metrics import precision_score, recall_score, f1_score
 
 class GenerateStats:
     def __init__(self):
