@@ -10,7 +10,7 @@ The project follows this workflow:
 
 
 **Step Mapping:**
-- **Step 1: Prompt Generation** — `pipeline/generate_scenarios/generate_scenarios.py`, source data in `pipeline/src/data/psychosis_excerpts.csv`
+- **Step 1: Stimuli Generation** — `pipeline/generate_scenarios/generate_scenarios.py`, source data in `pipeline/src/data/psychosis_excerpts.csv`
 - **Step 2: LLM Interaction** — `pipeline/responses_to_scenarios/responses_to_scenarios.py`
 - **Step 3: LLM-as-a-Judge** — `pipeline/llm_as_judge/llm_as_judge.py`
 - **Step 4: Results** — `pipeline/generate_stats/generate_stats.py`
