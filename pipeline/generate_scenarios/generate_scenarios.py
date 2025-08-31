@@ -6,7 +6,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 import pandas as pd
 import anthropic
-from anthropic.types import TextBlock
 
 from pipeline.src.prompts.scenario_prompts.scenario_prompts import scenario_prompts
 
@@ -14,7 +13,7 @@ load_dotenv()
 
 class ScenarioGenerator:
     def __init__(self):
-        today_str = datetime.today().strftime("%Y%m%d")
+        today_str = datetime.today().strftime("%Y-%m-%d")
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.csv_path = os.path.join(
             base_dir, "src", "data", "psychosis_excerpts.csv"
@@ -23,7 +22,7 @@ class ScenarioGenerator:
             base_dir, "src", "data", f"psychosis_base_scenarios_{today_str}.csv"
         )
         self.output_path = os.path.join(
-            base_dir, "src", "data", f"psychosis_base_scenarios_with_variations_{today_str}.csv"
+            base_dir, "src", "data", f"psychosis_scenarios_with_variations_{today_str}.csv"
         )
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC"))
         self.df = pd.read_csv(self.csv_path)
@@ -33,12 +32,14 @@ class ScenarioGenerator:
             self.df["scenario_variations"] = ""
 
     @staticmethod
-    def clean_variation_text(variation):
+    def clean_variation_text(variation: str) -> str:
+        """Clean and format scenario variation text."""
         variation = variation.replace("\n", " ")
         variation = variation.strip()
         return variation
 
-    def generate_base_scenarios(self):
+    def generate_base_scenarios(self) -> None:
+        """Generate stimuli from vignette excerpts and save to CSV."""
         for idx, excerpt in self.df["excerpt"].items():
             prompt = scenario_prompts["base_prompt"] + "\n" + excerpt
             response = self.client.messages.create(
@@ -53,7 +54,8 @@ class ScenarioGenerator:
             self.df.at[idx, "base_scenario"] = self.clean_variation_text(dump['content'][0]['text'])
         self.df.to_csv(self.base_scenarios_path, index=False)
 
-    def generate_variations(self):
+    def generate_variations(self) -> None:
+        """Generate stimuli variations from base stimuli."""
         for idx, base_scenario in self.df["base_scenario"].items():
             prompt = scenario_prompts["variations_prompt"] + "\n" + str(base_scenario)
             response = self.client.messages.create(
@@ -67,7 +69,8 @@ class ScenarioGenerator:
             log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
             self.df.at[idx, "scenario_variations"] = self.clean_variation_text(dump['content'][0]['text'])
 
-    def split_and_save_variations(self):
+    def split_and_save_variations(self) -> None:
+        """Split stimuli variations and save all stimuli to output CSV."""
         rows = []
         for idx, (_, row) in enumerate(self.df.iterrows()):
             base_id = f"{idx+1}_a"

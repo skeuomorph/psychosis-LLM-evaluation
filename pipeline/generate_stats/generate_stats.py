@@ -1,46 +1,58 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import mode
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 class GenerateStats:
     def __init__(self):
         self.csv_paths = [
             "pipeline/src/data/judges/gemini_as_judge_binary_2025-08-23-12-59-15.csv",
-            "pipeline/src/data/judges/human2_base_scenarios_manual_validation.csv",
-            "pipeline/src/data/judges/magistral_as_judge_binary_2025-08-23-13-07-35.csv",
-            "pipeline/src/data/judges/human1_base_scenarios_manual_validation.csv",
-            "pipeline/src/data/judges/qwen_as_judge_binary_2025-08-23-12-44-27.csv"
+            "pipeline/src/data/judges/human_consensus_2025-08-24.csv",
+            "pipeline/src/data/judges/kimi_as_judge_binary_2025-08-30-11-19-15.csv",
+            "pipeline/src/data/judges/qwen_as_judge_binary_2025-08-23-12-44-27.csv",
         ]
 
     def run(self):
-        self.df_gemini = pd.read_csv(self.csv_paths[0])
-        self.df_human2 = pd.read_csv(self.csv_paths[1])
-        self.df_magistral = pd.read_csv(self.csv_paths[2])
-        self.df_human1 = pd.read_csv(self.csv_paths[3])
-        self.df_qwen = pd.read_csv(self.csv_paths[4])
+        self.df_gemini = pd.read_csv(self.csv_paths[0], index_col=0)
+        self.df_consensus = pd.read_csv(self.csv_paths[1], index_col=0)
+        self.df_kimi = pd.read_csv(self.csv_paths[2], index_col=0)
+        self.df_qwen = pd.read_csv(self.csv_paths[3], index_col=0)
+
+        ## STUDY ONE
 
         # Cohen's kappa between human1 and human2
-        kappa = self.cohen_kappa(self.df_human1, self.df_human2)
-        print(f"Cohen's kappa (human1 vs human2): {kappa:.3f}")
+        kappa = self.cohen_kappa(self.df_consensus, self.df_gemini)
+        print(f"Cohen's kappa (Human Consensus vs Gemini): {kappa:.3f}")
 
-        # Criteria-specific stats
-        criteria_kappa = self.criteria_specific_kappa(self.df_human1, self.df_human2)
-        self.plot_bar(criteria_kappa, "Human Raters Criteria-specific Cohen's Kappa", "Kappa")
-        print("criteria specific cohen's kappa done")
-        # Criteria-specific Fleiss' Kappa (human2, human1, Qwen)
-        fleiss_kappa_kmq = self.criteria_specific_fleiss_kappa([self.df_human2, self.df_human1, self.df_qwen])
-        self.plot_bar(fleiss_kappa_kmq, "Criteria-specific Fleiss' Kappa (human2, human1, Qwen)", "Fleiss' Kappa")
+        # Criteria-specific Cohen's kappa
+        criteria_kappa = self.criteria_specific_kappa(self.df_consensus, self.df_gemini)
+        print("Criterion-Specific Cohen's kappa (Human Consensus vs Gemini):", criteria_kappa)
+        self.plot_bar(criteria_kappa, "Criterion-Specific Reliability Between Human Consensus and Gemini", "Reliability")
 
-        # Criteria-specific Fleiss' Kappa (human2, human1, Gemini)
-        fleiss_kappa_kmg = self.criteria_specific_fleiss_kappa([self.df_human2, self.df_human1, self.df_gemini])
-        self.plot_bar(fleiss_kappa_kmg, "Criteria-specific Fleiss' Kappa (human2, human1, Gemini)", "Fleiss' Kappa")
+        ## STUDY TWO
 
-        # Fleiss' Kappa stats (overall)
-        fleiss_stats = self.fleiss_kappa_stats()
-        for desc, value in fleiss_stats.items():
-            print(f"{desc}: {value:.3f}")
+        # Overall Cohen's kappa matrix (human consensus, Qwen, Gemini, Kimi)
+        self.overall_kappa_diagonal_table(
+            [self.df_consensus, self.df_qwen, self.df_gemini, self.df_kimi],
+            ["consensus", "qwen", "gemini", "kimi"]
+        )
 
-    # --- Custom Cohen’s Kappa (faithful to definition) ---
+        # Create jury dataframe: mode value of each cell from Gemini, Qwen, Kimi
+        stacked = np.stack([self.df_gemini.values, self.df_qwen.values, self.df_kimi.values], axis=-1)
+        modes, _ = mode(stacked, axis=-1, keepdims=False)
+        self.df_jury = pd.DataFrame(modes, columns=self.df_gemini.columns, index=self.df_gemini.index)
+
+        # Cohen's kappa between human consensus and jury
+        kappa_jury = self.cohen_kappa(self.df_consensus, self.df_jury)
+        print(f"Cohen's kappa (Human Consensus vs Jury of 3 Models): {kappa_jury:.3f}")
+
+        # Criteria-specific Cohen's kappa between human consensus and jury
+        criteria_kappa_jury = self.criteria_specific_kappa(self.df_consensus, self.df_jury)
+        print("Criterion-Specific Cohen's kappa (Human Consensus vs Jury of 3 Models):", criteria_kappa_jury)
+        self.plot_bar(criteria_kappa_jury, "Criterion-Specific Reliability Between Human Consensus and Jury of 3 Models", "Reliability")
+
+    # --- Cohen’s Kappa ---
     def cohen_kappa_score_custom(self, arr1, arr2):
         arr1, arr2 = np.array(arr1), np.array(arr2)
         assert arr1.shape == arr2.shape
@@ -61,9 +73,6 @@ class GenerateStats:
         row_marginals = confusion.sum(axis=1) / n
         col_marginals = confusion.sum(axis=0) / n
         p_e = np.dot(row_marginals, col_marginals)
-
-        print(p_o)
-        print(p_e)
 
         # Handle degenerate cases
         if p_e == 1:
@@ -90,100 +99,62 @@ class GenerateStats:
                     kappas.append(kappa)
             kappa_dict[crit] = np.mean(kappas) if kappas else np.nan
         return kappa_dict
-
-    def criteria_specific_fleiss_kappa(self, dfs):
-        criteria = [f"criteria_{i}" for i in range(1, 8)]
-        models = ["chatgpt", "claude", "deepseek", "llama"]
-        fleiss_dict = {}
-        for crit in criteria:
-            cols = [f"{model}_{crit}" for model in models if f"{model}_{crit}" in dfs[0].columns]
-            # Only use columns present in all dfs
-            valid_cols = [col for col in cols if all(col in df.columns for df in dfs)]
-            if not valid_cols:
-                fleiss_dict[crit] = np.nan
-                continue
-            ratings = []
-            for df in dfs:
-                ratings.append(df[valid_cols].values.flatten())
-            ratings = np.array(ratings).T  # shape: (n_items, n_raters)
-            fleiss_dict[crit] = self._fleiss_kappa_from_ratings(ratings)
-        return fleiss_dict
-
-    def _fleiss_kappa_from_ratings(self, ratings):
-        n_items, n_raters = ratings.shape
-        categories = np.unique(ratings[~np.isnan(ratings)])
-        n_categories = len(categories)
-        cat_to_index = {cat: i for i, cat in enumerate(categories)}
-
-        # Build count matrix: (n_items, n_categories)
-        category_counts = np.zeros((n_items, n_categories))
-        for i in range(n_items):
-            for j in range(n_raters):
-                val = ratings[i, j]
-                if not np.isnan(val):
-                    category_counts[i, cat_to_index[val]] += 1
-
-        # Compute P_i (agreement for item i)
-        if n_raters < 2:
-            return np.nan
-        P_i = ((category_counts ** 2).sum(axis=1) - n_raters) / (n_raters * (n_raters - 1))
-        P_bar = P_i.mean()
-
-        # Compute expected agreement
-        p = category_counts.sum(axis=0) / (n_items * n_raters)
-        P_e_bar = (p ** 2).sum()
-
-        return (P_bar - P_e_bar) / (1 - P_e_bar) if (1 - P_e_bar) != 0 else np.nan
+    
+    def overall_kappa_diagonal_table(self, dfs, rater_names):
+        n = len(dfs)
+        table = np.full((n, n), np.nan)
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+                arr1 = dfs[i].iloc[:, 1:].values.flatten()
+                arr2 = dfs[j].iloc[:, 1:].values.flatten()
+                table[i, j] = self.cohen_kappa_score_custom(arr1, arr2)
+        print("\nOverall Cohen's kappa between raters:")
+        print(pd.DataFrame(table, index=rater_names, columns=rater_names).round(3))
 
     def plot_bar(self, stat_dict, title, ylabel):
         plt.figure(figsize=(10, 5))
-        plt.bar(stat_dict.keys(), stat_dict.values())
-        plt.title(title)
-        plt.ylabel(ylabel)
-        plt.xticks(rotation=45)
+        criteria_labels = [
+            "Stigmatizes",
+            "Validates",
+            "Embellishes",
+            "Challenges",
+            "No Referral",
+            "Provides Advice",
+            "Continues Conversation"
+        ]
+        values = list(stat_dict.values())
+        bars = plt.bar(criteria_labels, values)
+        plt.title(title, pad=20)
+        plt.ylabel(ylabel, labelpad=15)
+        plt.xlabel("Criteria", labelpad=15)
+        # Manually wrap labels by inserting newlines
+        wrapped_labels = [
+            "Stigmatizes",
+            "Validates\nDelusion",
+            "Embellishes",
+            "Challenges",
+            "No Referral",
+            "Provides\nNon-Referral\nAdvice",
+            "Continues\nConversation"
+        ]
+        plt.xticks(range(len(criteria_labels)), wrapped_labels, rotation=0)
+        # Add values inside the bars
+        for bar, value in zip(bars, values):
+            formatted_value = f"{value:.2f}"
+            if formatted_value.startswith("0."):
+                formatted_value = f".{formatted_value[2:]}"
+            plt.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() / 2,
+                formatted_value,
+                ha='center',
+                va='center',
+                color='white',
+                fontsize=10,
+                fontweight='bold'
+            )
         plt.tight_layout()
-        plt.savefig(f"{title.replace(' ', '_').lower()}.png")
+        plt.savefig(f"pipeline/src/data/results/{title.replace(' ', '_').lower()}.png")
         plt.close()
-
-    def fleiss_kappa_stats(self):
-        stats = {}
-        stats["Fleiss' Kappa (human1, human2, Qwen)"] = self.fleiss_kappa([self.df_human1, self.df_human2, self.df_qwen])
-        stats["Fleiss' Kappa (human1, human2, Gemini)"] = self.fleiss_kappa([self.df_human1, self.df_human2, self.df_gemini])
-        stats["Fleiss' Kappa (human1, human2, Magistral)"] = self.fleiss_kappa([self.df_human1, self.df_human2, self.df_magistral])
-        stats["Fleiss' Kappa (Qwen, Gemini, Magistral)"] = self.fleiss_kappa([self.df_qwen, self.df_gemini, self.df_magistral])
-        stats["Fleiss' Kappa (All 5)"] = self.fleiss_kappa([self.df_human1, self.df_human2, self.df_qwen, self.df_gemini, self.df_magistral])
-        stats["Fleiss' Kappa (human1, human2, Qwen, Gemini)"] = self.fleiss_kappa([self.df_human1, self.df_human2, self.df_qwen, self.df_gemini])
-        return stats
-
-    # --- Fleiss’ Kappa (overall, all columns) ---
-    def fleiss_kappa(self, dfs):
-        cols = [col for col in dfs[0].columns if col != "id"]
-        ratings = []
-        for df in dfs:
-            ratings.append(df[cols].values.flatten())
-        ratings = np.array(ratings).T  # shape: (n_items, n_raters)
-
-        n_items, n_raters = ratings.shape
-        categories = np.unique(ratings[~np.isnan(ratings)])
-        n_categories = len(categories)
-        cat_to_index = {cat: i for i, cat in enumerate(categories)}
-
-        # Build count matrix: (n_items, n_categories)
-        category_counts = np.zeros((n_items, n_categories))
-        for i in range(n_items):
-            for j in range(n_raters):
-                val = ratings[i, j]
-                if not np.isnan(val):
-                    category_counts[i, cat_to_index[val]] += 1
-
-        if n_raters < 2:
-            return np.nan
-        # Compute P_i (agreement for item i)
-        P_i = ((category_counts ** 2).sum(axis=1) - n_raters) / (n_raters * (n_raters - 1))
-        P_bar = P_i.mean()
-
-        # Compute expected agreement
-        p = category_counts.sum(axis=0) / (n_items * n_raters)
-        P_e_bar = (p ** 2).sum()
-
-        return (P_bar - P_e_bar) / (1 - P_e_bar) if (1 - P_e_bar) != 0 else np.nan

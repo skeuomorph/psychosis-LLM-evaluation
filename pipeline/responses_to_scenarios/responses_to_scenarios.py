@@ -11,12 +11,30 @@ class ScenarioResponder:
         self.model_name = model_name
 
     @staticmethod
-    def clean_variation_text(variation):
+    def clean_response_text(variation: str) -> str:
+        """
+        Clean and format the model's response by removing newlines and extra spaces.
+
+        Args:
+            variation (str): The input text to clean.
+
+        Returns:
+            str: The cleaned text.
+        """
         variation = variation.replace("\n", " ")
         variation = variation.strip()
         return variation
 
-    def get_response(self, prompt):
+    def get_response(self, prompt: str):
+        """
+        Generate a response to the given prompt using the specified model.
+
+        Args:
+            prompt (str): The input prompt for the model.
+
+        Returns:
+            str: The model's response.
+        """
         if self.model_name == "chatgpt":
             openai.api_key = os.getenv("OPENAI")
             try:
@@ -32,7 +50,7 @@ class ScenarioResponder:
                     thought_tok = None
                 response_tok = dump.get('usage', {}).get('completion_tokens')
                 log_token_usage("gpt-4o", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=thought_tok, response_tokens=response_tok)
-                return self.clean_variation_text(dump['choices'][0]['message']['content'])
+                return self.clean_response_text(dump['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
         elif self.model_name == "claude":
@@ -49,7 +67,7 @@ class ScenarioResponder:
                 thought_tok = dump.get('usage', {}).get('reasoning_tokens') if 'reasoning_tokens' in dump.get('usage', {}) else None
                 response_tok = dump.get('usage', {}).get('output_tokens')
                 log_token_usage("claude-sonnet-4-20250514", prompt, dump['content'][0]['text'], prompt_tokens=prompt_tok, thought_tokens=thought_tok, response_tokens=response_tok)
-                return self.clean_variation_text(response.model_dump()['content'][0]['text'])
+                return self.clean_response_text(response.model_dump()['content'][0]['text'])
             except Exception as e:
                 raise e
         elif self.model_name == "deepseek":
@@ -66,7 +84,7 @@ class ScenarioResponder:
                 prompt_tok = dump.get('usage', {}).get('prompt_tokens')
                 response_tok = dump.get('usage', {}).get('completion_tokens')
                 log_token_usage("deepseek-v3-0324", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
-                return self.clean_variation_text(response.model_dump()['choices'][0]['message']['content'])
+                return self.clean_response_text(response.model_dump()['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
         elif self.model_name == "llama":
@@ -82,14 +100,16 @@ class ScenarioResponder:
                 prompt_tok = dump.get('usage', {}).get('prompt_tokens')
                 response_tok = dump.get('usage', {}).get('completion_tokens')
                 log_token_usage("llama3.1-405b-instruct-fp8", prompt, dump['choices'][0]['message']['content'], prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
-                return self.clean_variation_text(response.model_dump()['choices'][0]['message']['content'])
+                return self.clean_response_text(response.model_dump()['choices'][0]['message']['content'])
             except Exception as e:
                 raise e
 
-    def run(self):
+    def run(self) -> None:
+        """
+        Run the scenario responder pipeline to generate and save model responses.
+        """
         data_dir = os.path.join(os.path.dirname(__file__), "..", "src", "data")
-        files = [f for f in os.listdir(data_dir) if f.startswith("psychosis_base_scenarios_with_variations_") and f.endswith(".csv")]
-        # files = [f for f in os.listdir(data_dir) if f.startswith("holdout") and f.endswith(".csv")]
+        files = [f for f in os.listdir(data_dir) if f.startswith("psychosis_base_scenarios") and f.endswith(".csv")]
         if not files:
             raise FileNotFoundError("No matching scenario files found in data directory.")
         latest_file = max(files, key=lambda x: x.split("_")[-1].replace(".csv", ""))
@@ -106,7 +126,6 @@ class ScenarioResponder:
             # Save after each model to avoid data loss if a model fails
             today = datetime.today().strftime("%Y-%m-%d")
             output_path = os.path.join(os.path.dirname(__file__), "..", "src", "data", f"model_response_to_scenarios_{today}.csv")
-            # output_path = os.path.join(data_dir, f"holdout_sample_with_responses.csv")
             df.to_csv(output_path, index=False)
 
 def main():

@@ -3,7 +3,6 @@ from datetime import datetime
 
 LOG_PATH = os.path.join(os.path.dirname(__file__), "token_usage.log")
 
-# Ensure the directory for the log file exists
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 def log_token_usage(model_name, prompt, response, prompt_tokens=None, thought_tokens=None, response_tokens=None):
