@@ -1,6 +1,4 @@
-# Evals for the safety of LLMs interacting with people experiencing psychosis
-
-This project evaluates how different Large Language Models (LLMs) respond to psychosis scenarios and assesses their responses against predefined criteria to determine which models are most suitable for mental health crisis situations.
+# Using LLM-as-a-Judge/Jury to Advance Scalable, Clinically-Validated Safety Evaluations of Model Responses to Users Demonstrating Psychosis
 
 ## Project Overview
 
