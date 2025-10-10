@@ -18,18 +18,15 @@ class GenerateStats:
         self.df_kimi = pd.read_csv(self.csv_paths[2], index_col=0)
         self.df_qwen = pd.read_csv(self.csv_paths[3], index_col=0)
 
-        ## STUDY ONE
-
         # Cohen's kappa between human1 and human2
         kappa = self.cohen_kappa(self.df_consensus, self.df_gemini)
         print(f"Cohen's kappa (Human Consensus vs Gemini): {kappa:.3f}")
 
         # Criteria-specific Cohen's kappa
-        criteria_kappa = self.criteria_specific_kappa(self.df_consensus, self.df_gemini)
-        print("Criterion-Specific Cohen's kappa (Human Consensus vs Gemini):", criteria_kappa)
-        self.plot_bar(criteria_kappa, "Criterion-Specific Reliability Between Human Consensus and Gemini", "Reliability")
-
-        ## STUDY TWO
+        criteria_kappa_gemini = self.criteria_specific_kappa(self.df_consensus, self.df_gemini)
+        criteria_kappa_qwen = self.criteria_specific_kappa(self.df_consensus, self.df_qwen)
+        criteria_kappa_kimi = self.criteria_specific_kappa(self.df_consensus, self.df_kimi)
+        self.plot_multi_bar([criteria_kappa_gemini, criteria_kappa_qwen, criteria_kappa_kimi], "Criterion-Specific Reliability Between Human Consensus and Individual LLM Judges", "Reliability")
 
         # Overall Cohen's kappa matrix (human consensus, Qwen, Gemini, Kimi)
         self.overall_kappa_diagonal_table(
@@ -113,7 +110,8 @@ class GenerateStats:
         print(pd.DataFrame(table, index=rater_names, columns=rater_names).round(3))
 
     def plot_bar(self, stat_dict, title, ylabel):
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(7.5, 3.5))
+        plt.rcParams.update({'font.size': 10})
         criteria_labels = [
             "Stigmatizes",
             "Validates",
@@ -124,11 +122,24 @@ class GenerateStats:
             "Continues Conversation"
         ]
         values = list(stat_dict.values())
-        bars = plt.bar(criteria_labels, values)
-        plt.title(title, pad=20)
-        plt.ylabel(ylabel, labelpad=15)
-        plt.xlabel("Criteria", labelpad=15)
-        # Manually wrap labels by inserting newlines
+        pale_color = '#44BB99'
+
+        n = len(criteria_labels)
+        spacing = 1.0
+        pad = spacing
+        x_spaced = np.linspace(pad, pad + spacing * (n - 1), n)
+
+        bars = plt.bar(
+            x_spaced,
+            values,
+            color=pale_color,
+            edgecolor='black',
+            linewidth=2,
+            width=spacing * 0.7
+        )
+        plt.title(title, pad=20, fontweight='bold', fontsize=11)
+        plt.ylabel(ylabel, labelpad=5, fontweight='bold')
+
         wrapped_labels = [
             "Stigmatizes",
             "Validates\nDelusion",
@@ -138,8 +149,8 @@ class GenerateStats:
             "Provides\nNon-Referral\nAdvice",
             "Continues\nConversation"
         ]
-        plt.xticks(range(len(criteria_labels)), wrapped_labels, rotation=0)
-        # Add values inside the bars
+        plt.xticks(x_spaced, wrapped_labels, rotation=0, fontsize=9.25)
+
         for bar, value in zip(bars, values):
             formatted_value = f"{value:.2f}"
             if formatted_value.startswith("0."):
@@ -150,10 +161,106 @@ class GenerateStats:
                 formatted_value,
                 ha='center',
                 va='center',
-                color='white',
-                fontsize=10,
+                color='black',
                 fontweight='bold'
             )
+
+        plt.xlim(x_spaced[0] - (spacing*0.65), x_spaced[-1] + (spacing*0.65))
         plt.tight_layout()
-        plt.savefig(f"pipeline/src/data/results/{title.replace(' ', '_').lower()}.png")
+        plt.savefig(f"pipeline/src/data/results/{title.replace(' ', '_').lower()}.png", bbox_inches='tight')
+        plt.close()
+
+    def plot_multi_bar(self, stat_dicts, title, ylabel):
+        plt.figure(figsize=(10, 5))
+        plt.rcParams.update({'font.size': 10})
+        criteria_labels = [
+            "Stigmatizes",
+            "Validates",
+            "Embellishes",
+            "Challenges",
+            "No Referral",
+            "Provides Advice",
+            "Continues Conversation"
+        ]
+        x = np.arange(len(criteria_labels))
+        n_bars = len(stat_dicts)
+        width = 0.4
+
+        n = len(criteria_labels)
+        spacing = 1.0
+        pad = spacing
+        x_spaced = np.linspace(pad, pad + spacing * (n - 1), n)
+
+        bars_list = []
+        labels = ["Gemini", "Qwen", "Kimi"]
+        pale_colors = ['#77AADD', '#EE8866', '#EEDD88']
+        spacing = 1.7
+        x_spaced = x * spacing
+        for i, stat_dict in enumerate(stat_dicts):
+            offset = (i - (n_bars - 1) / 2) * (width + 0.05)
+            values = list(stat_dict.values())
+            bars = plt.bar(
+                x_spaced + offset,
+                values,
+                width,
+                label=labels[i],
+                color=pale_colors[i % len(pale_colors)],
+                edgecolor='black',
+                linewidth=1.15
+            )
+            bars_list.append(bars)
+
+        plt.title(title, 
+                  pad=20, 
+                  fontsize=15, 
+                  fontweight='bold')
+        plt.ylabel(ylabel, 
+                   labelpad=5, 
+                    fontsize=12, 
+                   fontweight='bold')
+        wrapped_labels = [
+            "Stigmatizes",
+            "Validates\nDelusion",
+            "Embellishes",
+            "Challenges",
+            "No Referral",
+            "Provides\nNon-Referral\nAdvice",
+            "Continues\nConversation"
+        ]
+        plt.xticks(x_spaced, 
+                   wrapped_labels, 
+                   rotation=0, 
+                   fontsize=10)
+
+        ax = plt.gca()
+        last_xtick = x_spaced[-1]
+        ylim = ax.get_ylim()
+        plt.legend(
+            loc='upper right',
+            bbox_to_anchor=(
+            (last_xtick + spacing * 0.6) / ax.get_xlim()[1], 0.98
+            )
+        )
+
+        for bars in bars_list:
+            for bar in bars:
+                value = bar.get_height()
+                formatted_value = f"{value:.2f}"
+                if formatted_value.startswith("0."):
+                    formatted_value = f".{formatted_value[2:]}"
+                plt.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() / 2,
+                    formatted_value,
+                    ha='center',
+                    va='center',
+                    color='black',
+                    fontsize=8.25,
+                    fontweight='bold'
+                )
+
+        plt.xlim(x_spaced[0] - (spacing*0.6), x_spaced[-1] + (spacing*0.6))
+
+        plt.tight_layout()
+        plt.savefig(f"pipeline/src/data/results/{title.replace(' ', '_').lower()}.png", bbox_inches='tight')
         plt.close()

@@ -1,12 +1,11 @@
-import time
 from typing import Tuple
+import re
 
 from pipeline.src.utils.logger.token_logger import log_token_usage
 from pipeline.src.prompts.criteria_prompts.criteria_prompts import criteria_prompts
 
 import pandas as pd
 import os
-import openai
 from google import genai
 from google.genai import types
 from openai import OpenAI
@@ -29,27 +28,44 @@ class LLMAsJudge:
         answer = lines[0].strip().lower()
         explanation = lines[1].strip() if len(lines) > 1 else ""
         return answer, explanation
-
+    
+    @staticmethod
+    def split_answer_explanation_qwen(text: str) -> Tuple[str, str]:
+        """Split the response into answer and explanation parts for Qwen."""
+        match = re.search(r'</think>\s*(.*)', text, re.DOTALL)
+        if match:
+            result = match.group(1).strip()
+            lines = result.strip().split('\n', 1)
+            answer = lines[0].strip().lower()
+            explanation = lines[1].strip() if len(lines) > 1 else ""
+            return answer, explanation
+        else:
+            raise ValueError("Response format is incorrect")
+        
     def assess_response_qwen(self, scenario: str, model_response: str, criteria_prompt: str) -> Tuple[str, str]:
         """Assess a model response using Qwen and return answer and explanation."""
         prompt = criteria_prompt + f"\nUSER'S MESSAGE:\n{scenario}\nLLM RESPONSE:\n{model_response}"
-        api_key = os.getenv("LAMBDA")
-        client = openai.OpenAI(api_key=api_key, base_url="https://api.lambda.ai/v1")
-        try:
-            response = client.chat.completions.create(
-                model="qwen3-32b-fp8",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-            )
-            dump = response.model_dump()
-            prompt_tok = dump.get('usage', {}).get('prompt_tokens')
-            response_tok = dump.get('usage', {}).get('completion_tokens')
-            content = dump['choices'][0]['message']['content']
-            log_token_usage("qwen3-32b-fp8", prompt, content, prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
-            cleaned = self.clean_response_text(content)
-            return self.split_answer_explanation(cleaned)
-        except Exception as e:
-            raise e
+        client = OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=os.getenv("HF_TOKEN"),
+        )
+        response = client.chat.completions.create(
+            model="Qwen/Qwen3-32B-FP8",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                },
+            ],
+            temperature=0,
+        )
+        dump = response.model_dump()
+        prompt_tok = dump.get('usage', {}).get('prompt_tokens')
+        response_tok = dump.get('usage', {}).get('completion_tokens')
+        content = dump['choices'][0]['message']['content']
+        log_token_usage("qwen3-32b-fp8", prompt, content, prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
+        cleaned = self.clean_response_text(content)
+        return self.split_answer_explanation_qwen(cleaned)
 
     def assess_response_gemini(self, scenario: str, model_response: str, criteria_prompt: str) -> Tuple[str, str]:
         """Assess a model response using Gemini and return answer and explanation."""
@@ -61,7 +77,7 @@ class LLMAsJudge:
                 model="gemini-2.5-pro",
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0
+                    temperature=0,
                 )
             )
             dump = response.model_dump()
@@ -90,13 +106,12 @@ class LLMAsJudge:
                     "content": prompt
                 },
             ],
-            temperature=0
+            temperature=0,
         )
         dump = response.model_dump()
         prompt_tok = dump.get('usage', {}).get('prompt_tokens')
         response_tok = dump.get('usage', {}).get('completion_tokens')
         content = dump['choices'][0]['message']['content']
-        print("done")
         log_token_usage("Kimi-K2-Instruct", prompt, content, prompt_tokens=prompt_tok, thought_tokens=None, response_tokens=response_tok)
         cleaned = self.clean_response_text(content)
         return self.split_answer_explanation(cleaned)
