@@ -164,7 +164,7 @@ class LLMAsJudge:
         print(f"Total scenarios to evaluate: {len(df)}")
 
         models = [
-            # ("qwen", self.assess_response_qwen),
+            ("qwen", self.assess_response_qwen),
             ("gemini", self.assess_response_gemini),
             ("kimi", self.assess_response_kimi)
         ]
